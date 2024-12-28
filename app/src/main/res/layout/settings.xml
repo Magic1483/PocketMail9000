@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFFFF">
+
+    <!-- Header with Logo and Title -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#A9A9A9"
+        android:padding="8dp"
+        android:paddingHorizontal="4dp">
+
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/win_logo"
+            android:layout_gravity="center_vertical"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:text="Pocket Mail"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:layout_marginStart="8dp"
+            android:layout_gravity="center_vertical"/>
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="4dp"
+        android:paddingTop="16dp">
+        <EditText
+            android:id="@+id/imap_host"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:fontFamily="@font/tahoma"
+            android:hint="imap host" />
+
+        <EditText
+            android:id="@+id/smtp_host"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:fontFamily="@font/tahoma"
+            android:hint="smtp host" />
+
+        <EditText
+            android:id="@+id/email_login"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:fontFamily="@font/tahoma"
+            android:hint="Email " />
+
+        <EditText
+            android:id="@+id/email_password"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:fontFamily="@font/tahoma"
+            android:hint="Password" />
+
+        <EditText
+            android:id="@+id/email_limit"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:fontFamily="@font/tahoma"
+            android:hint="Mail Limit" />
+    </LinearLayout>
+
+
+    <!--spacer-->
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+    <TextView
+        android:id="@+id/FooterText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#D3D3D3"
+        android:padding="4dp"
+        android:textColor="#000000"/>
+
+    <!-- Bottom Navigation -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#A9A9A9"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/settongs_back"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Back"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"/>
+
+        <TextView
+            android:id="@+id/settongs_save"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"/>
+    </LinearLayout>
+</LinearLayout>
