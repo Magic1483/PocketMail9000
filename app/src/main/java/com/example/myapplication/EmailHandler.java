@@ -3,6 +3,7 @@ package com.example.myapplication;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
+import android.widget.TextView;
 
 import com.sun.mail.imap.IMAPFolder;
 
@@ -36,8 +37,8 @@ import java.util.regex.Pattern;
 
 
 public class EmailHandler {
-    private static String IMAP_PORT = "993";
-    private static String SMTP_PORT = "587";
+    // smtp port yandex 587
+    // imap port yandex 993
     private Session defaultSession;
 
     public  static EmailHandler instance;
@@ -84,7 +85,7 @@ public class EmailHandler {
         props.put("mail.smtp.auth","true");
         props.put("mail.smtp.starttls.enable", "true");
         props.put("mail.smtp.host",sharedPreferences.getString("smtp_host",""));
-        props.put("mail.smtp.port",SMTP_PORT);
+        props.put("mail.smtp.port",sharedPreferences.getString("smtp_port",""));
 
 
         String email = sharedPreferences.getString("email","false");
@@ -155,13 +156,15 @@ public class EmailHandler {
             String password,
             String imap_host,
             int limit,
-            Context ctx
+            Context ctx,
+            TextView status
             ){
 
+        SharedPreferences sharedPreferences = ctx.getSharedPreferences("config",Context.MODE_PRIVATE);
         Properties props = new Properties();
         props.put("mail.store.protocol","imaps");
         props.put("mail.imaps.host",imap_host);
-        props.put("mail.imaps.port",IMAP_PORT);
+        props.put("mail.imaps.port",sharedPreferences.getString("imap_port",""));
         props.put("mail.imaps.ssl.enable",true);
         props.put("mail.debug",true);
 
@@ -193,7 +196,8 @@ public class EmailHandler {
             // get last n
             Message[] messages = inbox.getMessages(start, messageCount);
             Log.i("EMAIL HANDLER","message count "+messages.length);
-
+            status.setText("Retrieve messages");
+            int counter = 1;
             for (int i = messages.length-1; i >= 0; i--){
                     // work only with html now !!
                     Message m  = messages[i];
@@ -206,10 +210,13 @@ public class EmailHandler {
 
 //                    Log.i("EMAIL HANDLER","from "+sender+" "+type);
 
+                    status.setText(String.format("Retrieve messages %s:%s",counter,limit));
+                    counter++;
                     if (existing_uids.contains(uid.toString())){
 //                        Log.i("EMAIL HANDLER","last uid is"+last_uid);
                         continue;
                     }
+
 
                     if (type.contains("text/html")){
 //                        Log.i("DB helper","uid "+uid.toString());

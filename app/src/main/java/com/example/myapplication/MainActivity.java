@@ -49,8 +49,9 @@ public class MainActivity extends Activity {
 
         if (NetworkUtil.isNetworkAvailable(this)){
             new Thread(()->{
+                TextView footerText = findViewById(R.id.FooterText);
                 List<EmailMessage> emails = EmailHandler.getInstance()
-                        .getEmails(email,pass,imap_host,limit,this);
+                        .getEmails(email,pass,imap_host,limit,this,footerText);
                 Log.i("EMAIL HANDLER M",String.valueOf(emails.size()));
 
 
@@ -59,7 +60,7 @@ public class MainActivity extends Activity {
                     emailList.addAll(emails);
                     adapter.notifyDataSetChanged();
 
-                    TextView footerText = findViewById(R.id.FooterText);
+
                     footerText.setText(String.format("Pocketmail 9000: %s items recieved", emailList.size() ));
                 });
             }).start();
@@ -116,11 +117,15 @@ public class MainActivity extends Activity {
         SharedPreferences shared = getSharedPreferences("config",MODE_PRIVATE);
 
         String imap_host = shared.getString("imap_host","false");
+        String imap_port = shared.getString("imap_port","false");
         String smtp_host = shared.getString("smtp_host","false");
+        String smtp_port = shared.getString("smtp_port","false");
         String email = shared.getString("email","false");
         String pass = shared.getString("password","false");
         Log.i("SETUP MAIL",imap_host+" "+email);
-        if (imap_host.equals("false") || email.equals("false") || pass.equals("false") || smtp_host.equals("false")){
+        if (imap_host.equals("false") || email.equals("false") || pass.equals("false") || smtp_host.equals("false")
+            || imap_port.equals("false") || smtp_port.equals("false")
+        ){
             SettingsHandler();
         } else {
             // check db
@@ -158,17 +163,24 @@ public class MainActivity extends Activity {
         TextView back = findViewById(R.id.settongs_back);
         TextView save = findViewById(R.id.settongs_save);
 
-        TextView imap_view = findViewById(R.id.imap_host);
-        TextView smtp_view = findViewById(R.id.smtp_host);
-        TextView email_view = findViewById(R.id.email_login);
-        TextView limit_view = findViewById(R.id.email_limit);
-        TextView password_view = findViewById(R.id.email_password);
+        TextView imap_view      = findViewById(R.id.imap_host);
+        TextView imap_port_view = findViewById(R.id.imap_port);
+        TextView smtp_view      = findViewById(R.id.smtp_host);
+        TextView smtp_port_view = findViewById(R.id.smtp_port);
+
+        TextView email_view     = findViewById(R.id.email_login);
+        TextView limit_view     = findViewById(R.id.email_limit);
+        TextView password_view  = findViewById(R.id.email_password);
 
         SharedPreferences shared = getSharedPreferences("config",MODE_PRIVATE);
         SharedPreferences.Editor editor = shared.edit();
 
         imap_view.setText(shared.getString("imap_host",""));
+        imap_port_view.setText(shared.getString("imap_port",""));
+
         smtp_view.setText(shared.getString("smtp_host",""));
+        smtp_port_view.setText(shared.getString("smtp_port",""));
+
         email_view.setText(shared.getString("email",""));
         password_view.setText(shared.getString("password",""));
 
@@ -180,7 +192,9 @@ public class MainActivity extends Activity {
         });
         save.setOnClickListener((view)->{
             editor.putString("imap_host",imap_view.getText().toString());
+            editor.putString("imap_port",imap_port_view.getText().toString());
             editor.putString("smtp_host",smtp_view.getText().toString());
+            editor.putString("smtp_port",smtp_port_view.getText().toString());
             editor.putString("email",email_view.getText().toString());
             editor.putString("password",password_view.getText().toString());
             if (!limit_view.getText().toString().isEmpty()){

@@ -145,6 +145,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         this.getWritableDatabase()
                 .insert(MessageEntry.TABLE_NAME,null,contentValues);
 
-        Log.i("DB helper","add message "+subject);
+//        Log.i("DB helper","add message "+subject);
     }
 }
