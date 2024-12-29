@@ -6,6 +6,6 @@ now it weight only 562kb in release mod.
 
 ## Some screenshots
 
-[main activity](../imgs/main_activity.png)
-[settings](../imgs/settings.png)
-[new message](../imgs/new_message.png)
+[main activity](./imgs/main_activity.png)
+[settings](./imgs/settings.png)
+[new message](./imgs/new_message.png)
