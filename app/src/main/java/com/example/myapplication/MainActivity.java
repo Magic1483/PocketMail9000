@@ -1,7 +1,11 @@
 package com.example.myapplication;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -18,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 
 import jakarta.mail.MessagingException;
 
@@ -38,10 +43,14 @@ public class MainActivity extends Activity {
         String pass = shared.getString("password","false");
         int limit = shared.getInt("limit",10);
 
-        if (emailList.size() == 0){
+        // add messages from database
+        emailList.clear();
+        emailList.addAll(DatabaseHelper.getInstance(this).getRecords());
+
+        if (NetworkUtil.isNetworkAvailable(this)){
             new Thread(()->{
-                List<EmailMessage> emails = new EmailHandler()
-                        .getEmails(email,pass,imap_host,limit);
+                List<EmailMessage> emails = EmailHandler.getInstance()
+                        .getEmails(email,pass,imap_host,limit,this);
                 Log.i("EMAIL HANDLER M",String.valueOf(emails.size()));
 
 
@@ -54,18 +63,27 @@ public class MainActivity extends Activity {
                     footerText.setText(String.format("Pocketmail 9000: %s items recieved", emailList.size() ));
                 });
             }).start();
+        } else {
+            Log.i("EMAIL","no network connection");
         }
+
 
     }
 
-    private void NewMsgHandler(){
+    private void NewMsgHandler(Optional<String> predef_to){
         setContentView(R.layout.write_message);
-
 
         TextView back = findViewById(R.id.back_btn);
         TextView send = findViewById(R.id.send_message);
         EditText msg_to = findViewById(R.id.msg_to);
+        EditText msg_subject = findViewById(R.id.msg_subject);
         EditText msg_text = findViewById(R.id.WriteMessage);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (predef_to.isPresent()){
+                msg_to.setText(predef_to.get());
+            }
+        }
 
         back.setOnClickListener((view) -> {
             setContentView(R.layout.activity_main);
@@ -73,20 +91,21 @@ public class MainActivity extends Activity {
         });
 
         send.setOnClickListener((view)->{
-            new Thread(()->{
-//                EmailHandler eh = new EmailHandler();
-//                // send msg
-//                eh.SendMessage(
-//                            msg_to.getText().toString(),
-//                            msg_text.getText().toString(),
-//                            "max-lils2013@yandex.ru",
-//                            "ujrqcsyhccflxxqc");
+            if (!msg_subject.getText().toString().isBlank() && !msg_text.getText().toString().isBlank() && !msg_to.getText().toString().isBlank()){
+                new Thread(()->{
+                    // send msg
+                    EmailHandler.getInstance().SendMessage(
+                            msg_to.getText().toString(),
+                            msg_text.getText().toString(),
+                            msg_subject.getText().toString(),
+                            this);
 
-                runOnUiThread(() -> {
-                    setContentView(R.layout.activity_main);
-                    SetupMailList();
-                });
-            }).start();
+                    runOnUiThread(() -> {
+                        setContentView(R.layout.activity_main);
+                        SetupMailList();
+                    });
+                }).start();
+            }
         });
     }
 
@@ -97,12 +116,15 @@ public class MainActivity extends Activity {
         SharedPreferences shared = getSharedPreferences("config",MODE_PRIVATE);
 
         String imap_host = shared.getString("imap_host","false");
+        String smtp_host = shared.getString("smtp_host","false");
         String email = shared.getString("email","false");
         String pass = shared.getString("password","false");
         Log.i("SETUP MAIL",imap_host+" "+email);
-        if (imap_host.equals("false") || email.equals("false") || pass.equals("false")){
+        if (imap_host.equals("false") || email.equals("false") || pass.equals("false") || smtp_host.equals("false")){
             SettingsHandler();
         } else {
+            // check db
+
             setContentView(R.layout.activity_main);
 
             TextView footerText = findViewById(R.id.FooterText);
@@ -116,11 +138,14 @@ public class MainActivity extends Activity {
             TextView settings = findViewById(R.id.Settings);
             // new msg
             new_msg.setOnClickListener((view)->{
-                NewMsgHandler();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    NewMsgHandler(Optional.empty());
+                }
             });
             settings.setOnClickListener((view)->{
                 SettingsHandler();
             });
+
             getEmails(); // load emails
         }
 
@@ -143,6 +168,7 @@ public class MainActivity extends Activity {
         SharedPreferences.Editor editor = shared.edit();
 
         imap_view.setText(shared.getString("imap_host",""));
+        smtp_view.setText(shared.getString("smtp_host",""));
         email_view.setText(shared.getString("email",""));
         password_view.setText(shared.getString("password",""));
 
@@ -189,6 +215,7 @@ public class MainActivity extends Activity {
             time_text.setText(email.time);
             subject_text.setText(email.subject);
             TextView backBtn = findViewById(R.id.back_btn);
+            TextView answerBtn = findViewById(R.id.answer_btn);
             WebView webView = findViewById(R.id.ReadMessageWebView);
 
             if (email.type.contains("html")){
@@ -202,6 +229,12 @@ public class MainActivity extends Activity {
             backBtn.setOnClickListener((v) -> {
                 setContentView(R.layout.activity_main);
                 SetupMailList();
+            });
+
+            answerBtn.setOnClickListener((v) ->{
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    NewMsgHandler(Optional.of(email.sender));
+                }
             });
         });
     }

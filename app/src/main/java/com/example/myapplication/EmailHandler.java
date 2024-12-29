@@ -1,5 +1,7 @@
 package com.example.myapplication;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.sun.mail.imap.IMAPFolder;
@@ -27,18 +29,38 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
-
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class EmailHandler {
-//    private static String IMAP = "imap.yandex.ru";
-    private static String SMTP = "smtp.yandex.ru";
     private static String IMAP_PORT = "993";
-    private static String SMTP_PORT = "465";
+    private static String SMTP_PORT = "587";
+    private Session defaultSession;
 
+    public  static EmailHandler instance;
 
+    public static  synchronized EmailHandler getInstance(){
+        if (instance == null){
+            instance = new EmailHandler();
+        }
+        return  instance;
+    }
 
+    private String extractEmail(String text){
+        String emailRegex = "<([^<>]+@[^<>]+)>";
+        Pattern pattern = Pattern.compile(emailRegex);
+        Matcher matcher = pattern.matcher(text);
+
+        if (matcher.find()){
+            String res = matcher.group(1);
+            return  res;
+        } else {
+            return  text;
+        }
+    }
 
     private static String getHtmlContent(Part part) throws Exception {
         if (part.isMimeType("text/html")) {
@@ -56,17 +78,22 @@ public class EmailHandler {
         return null; // No HTML content found
     }
 
-    public void SendMessage(String to, String text,String email,String password)  {
+    public void SendMessage(String to, String text,String subject,Context ctx)  {
+        SharedPreferences sharedPreferences = ctx.getSharedPreferences("config",Context.MODE_PRIVATE);
         Properties props = new Properties();
         props.put("mail.smtp.auth","true");
-        props.put("mail.smtp.starttls","true");
-        props.put("mail.smtp.host",SMTP);
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.host",sharedPreferences.getString("smtp_host",""));
         props.put("mail.smtp.port",SMTP_PORT);
 
-        Session session = Session.getDefaultInstance(props, new Authenticator() {
+
+        String email = sharedPreferences.getString("email","false");
+        String password = sharedPreferences.getString("password","false");
+
+        Session session = Session.getInstance(props, new Authenticator() {
             @Override
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(email,password);
+                return new PasswordAuthentication(email, password);
             }
         });
         Log.i("EMAIL SEND","session created "+email);
@@ -76,14 +103,11 @@ public class EmailHandler {
             message.setFrom(new InternetAddress(email));
             message.setRecipients(
                     Message.RecipientType.TO,
-                    InternetAddress.parse("sashafurancev@gmail.com"));
-            message.setSubject("Test mod");
+                    InternetAddress.parse(to));
+            message.setSubject(subject);
 
-            MimeBodyPart mimeBodyPart = new MimeBodyPart();
-            mimeBodyPart.setContent("tet text", "text/html; charset=utf-8");
-
-            Multipart multipart = new MimeMultipart();
-            multipart.addBodyPart(mimeBodyPart);
+            message.setText(text);
+            Log.i("EMAIL","message "+message.getSubject());
 
             Transport.send(message);
             Log.i("EMAIL SEND","message sended (maybe) "+text);
@@ -91,11 +115,48 @@ public class EmailHandler {
             Log.e("EMAIL ERROR",e.toString());
         }
 
-
-
     }
 
-    public List<EmailMessage> getEmails(String email,String password,String imap_host,int limit){
+
+
+    private void AddMessage(
+            List<EmailMessage> emails,
+            Context ctx,
+            String sender,
+            String data,
+            String subject,
+            String timestamp,
+            String type,
+            Long uid){
+
+        emails.add(new EmailMessage(
+                sender,
+                data,
+                subject,
+                timestamp,
+                type,
+                uid
+        ));
+        DatabaseHelper.getInstance(ctx).AddMessage(
+                sender,
+                data,
+                uid.toString(),
+                timestamp,
+                subject
+        );
+    }
+
+
+    // Mode
+    // Update load while uid not in DB
+    // Load load all
+    public List<EmailMessage> getEmails(
+            String email,
+            String password,
+            String imap_host,
+            int limit,
+            Context ctx
+            ){
 
         Properties props = new Properties();
         props.put("mail.store.protocol","imaps");
@@ -105,8 +166,14 @@ public class EmailHandler {
         props.put("mail.debug",true);
 
         List<EmailMessage> emails = new ArrayList<>();
+        DatabaseHelper databaseHelper = DatabaseHelper.getInstance(ctx);
+        String last_uid = databaseHelper.getLastRecord();
+        List<String> existing_uids = databaseHelper.getAllUids();
+        Log.i("EMAIL HANDLER","last uid "+last_uid);
+
+
         try {
-            Session session = Session.getDefaultInstance(props,null);
+            Session session = Session.getInstance(props,null);
             Log.i("EMAIL HANDLER","session created");
             Store store = session.getStore("imaps");
             store.connect(imap_host,email,password);
@@ -122,45 +189,44 @@ public class EmailHandler {
             // get last 10 messages
             int messageCount = inbox.getMessageCount();
             int start = Math.max(1,messageCount - limit +1);
-            Message[] messages = inbox.getMessages(start,messageCount);
+//            Message[] messages = inbox.getMessages();
+            // get last n
+            Message[] messages = inbox.getMessages(start, messageCount);
+            Log.i("EMAIL HANDLER","message count "+messages.length);
 
             for (int i = messages.length-1; i >= 0; i--){
                     // work only with html now !!
                     Message m  = messages[i];
                     String subject = m.getSubject(); // msg Subject
-                    String sender = InternetAddress.toString(m.getFrom());
+                    String sender = extractEmail(InternetAddress.toString(m.getFrom()));
                     String data = m.getContent().toString();
                     Date date = m.getSentDate();
                     String type = m.getContentType();
                     Long uid = inbox.getUID(m);
 
-                    Log.i("EMAIL HANDLER","from "+sender+" "+type);
+//                    Log.i("EMAIL HANDLER","from "+sender+" "+type);
+
+                    if (existing_uids.contains(uid.toString())){
+//                        Log.i("EMAIL HANDLER","last uid is"+last_uid);
+                        continue;
+                    }
 
                     if (type.contains("text/html")){
-                        emails.add(new EmailMessage(
-                                sender,
-                                data,
-                                subject,
-                                new SimpleDateFormat("HH:mm").format(date),
-                                type,
-                                uid
-                        ));
+//                        Log.i("DB helper","uid "+uid.toString());
+                        this.AddMessage(emails,ctx,sender,data,subject,
+                                new SimpleDateFormat("EEE MMM dd HH:mm yyyy", Locale.ENGLISH).format(date),type,uid);
+
                     } else if (type.contains("multipart/")) {
                         String content = getHtmlContent(m);
                         if (content != null){
-                            emails.add(new EmailMessage(
-                                    sender,
-                                    content,
-                                    subject,
-                                    new SimpleDateFormat("HH:mm").format(date),
-                                    "text/html",
-                                    uid
-                            ));
+                            this.AddMessage(emails,ctx,sender,content,subject,
+                                    new SimpleDateFormat("EEE MMM dd HH:mm yyyy", Locale.ENGLISH).format(date),type,uid);
                         }
                     }
             }
             inbox.close();
             store.close();
+            Log.i("DB helper","uids end "+databaseHelper.getAllUids().toString());
 
         } catch (Exception e){
             Log.e("EMAIL HANDLER",e.toString());
