@@ -9,8 +9,11 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -42,14 +45,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Cursor cursor = this.getReadableDatabase()
                 .query("messages", null, null, null, null, null, "timestamp DESC");
         while (cursor.moveToNext()) {
-
-
+            Date msg_date = new Date(cursor.getLong(cursor.getColumnIndex(MessageEntry.TIMESTAMP_FIELD)) * 1000L);
 
             emailMessages.add(new EmailMessage(
                     cursor.getString(cursor.getColumnIndex(MessageEntry.SENDER_FIELD)),
                     cursor.getString(cursor.getColumnIndex(MessageEntry.MESSAGE_FIELD)),
                     cursor.getString(cursor.getColumnIndex(MessageEntry.SUBJECT_FIELD)),
-                    cursor.getString(cursor.getColumnIndex(MessageEntry.TIMESTAMP_FIELD)),
+                    new SimpleDateFormat("EEE MMM dd HH:mm yyyy", Locale.ENGLISH).format(msg_date),
                     "text/html",
                     Long.parseLong(cursor.getString(cursor.getColumnIndex("uid")))
             ));
@@ -71,7 +73,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String CREATE_TABLE_MESSAGES =
             "CREATE TABLE " + MessageEntry.TABLE_NAME + " (" +
                     MessageEntry._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    MessageEntry.TIMESTAMP_FIELD + " DATETIME NOT NULL, " +
+                    MessageEntry.TIMESTAMP_FIELD + " INTEGER NOT NULL, " +
                     MessageEntry.UID_FIELD + " TEXT NOT NULL, " +
                     MessageEntry.MESSAGE_FIELD + " TEXT NOT NULL, " +
                     MessageEntry.SUBJECT_FIELD + " TEXT NOT NULL, " +
@@ -134,13 +136,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             String sender,
             String message,
             String uid,
-            String timestamp,
+            Date timestamp,
             String subject){
         ContentValues contentValues = new ContentValues();
         contentValues.put(MessageEntry.SENDER_FIELD,sender);
         contentValues.put(MessageEntry.MESSAGE_FIELD,message);
         contentValues.put(MessageEntry.UID_FIELD,uid);
-        contentValues.put(MessageEntry.TIMESTAMP_FIELD,timestamp);
+        contentValues.put(MessageEntry.TIMESTAMP_FIELD,timestamp.getTime() / 1000L);
         contentValues.put(MessageEntry.SUBJECT_FIELD,subject);
         this.getWritableDatabase()
                 .insert(MessageEntry.TABLE_NAME,null,contentValues);

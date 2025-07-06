@@ -38,7 +38,11 @@ import java.util.regex.Pattern;
 
 public class EmailHandler {
     // smtp port yandex 587
-    // imap port yandex 993
+    // smtp port yandex 587
+
+    // imap port google
+    // smtp port google
+
     private Session defaultSession;
 
     public  static EmailHandler instance;
@@ -88,8 +92,8 @@ public class EmailHandler {
         props.put("mail.smtp.port",sharedPreferences.getString("smtp_port",""));
 
 
-        String email = sharedPreferences.getString("email","false");
-        String password = sharedPreferences.getString("password","false");
+        String email = sharedPreferences.getString("email","");
+        String password = sharedPreferences.getString("password","");
 
         Session session = Session.getInstance(props, new Authenticator() {
             @Override
@@ -119,25 +123,13 @@ public class EmailHandler {
     }
 
 
-
-    private void AddMessage(
-            List<EmailMessage> emails,
+    private void AddMessageToDB(
             Context ctx,
             String sender,
             String data,
             String subject,
-            String timestamp,
-            String type,
+            Date timestamp,
             Long uid){
-
-        emails.add(new EmailMessage(
-                sender,
-                data,
-                subject,
-                timestamp,
-                type,
-                uid
-        ));
         DatabaseHelper.getInstance(ctx).AddMessage(
                 sender,
                 data,
@@ -145,6 +137,25 @@ public class EmailHandler {
                 timestamp,
                 subject
         );
+    }
+
+    private void AddMessageToScreen(
+            List<EmailMessage> emails,
+            String sender,
+            String data,
+            String subject,
+            Date timestamp,
+            String type,
+            Long uid){
+
+        emails.add(new EmailMessage(
+                sender,
+                data,
+                subject,
+                new SimpleDateFormat("EEE MMM dd HH:mm yyyy", Locale.ENGLISH).format(timestamp),
+                type,
+                uid
+        ));
     }
 
 
@@ -189,7 +200,6 @@ public class EmailHandler {
 
 
 
-            // get last 10 messages
             int messageCount = inbox.getMessageCount();
             int start = Math.max(1,messageCount - limit +1);
 //            Message[] messages = inbox.getMessages();
@@ -213,21 +223,23 @@ public class EmailHandler {
                     status.setText(String.format("Retrieve messages %s:%s",counter,limit));
                     counter++;
                     if (existing_uids.contains(uid.toString())){
-//                        Log.i("EMAIL HANDLER","last uid is"+last_uid);
+                        Log.i("EMAIL HANDLER","last uid is "+last_uid);
+                        this.AddMessageToScreen(emails,sender,data,subject,date,type,uid);
+
                         continue;
                     }
 
 
                     if (type.contains("text/html")){
 //                        Log.i("DB helper","uid "+uid.toString());
-                        this.AddMessage(emails,ctx,sender,data,subject,
-                                new SimpleDateFormat("EEE MMM dd HH:mm yyyy", Locale.ENGLISH).format(date),type,uid);
+                        this.AddMessageToDB(ctx,sender,data,subject,date,uid);
+                        this.AddMessageToScreen(emails,sender,data,subject,date,type,uid);
 
                     } else if (type.contains("multipart/")) {
                         String content = getHtmlContent(m);
                         if (content != null){
-                            this.AddMessage(emails,ctx,sender,content,subject,
-                                    new SimpleDateFormat("EEE MMM dd HH:mm yyyy", Locale.ENGLISH).format(date),type,uid);
+                            this.AddMessageToDB(ctx,sender,data,subject,date,uid);
+                            this.AddMessageToScreen(emails,sender,data,subject,date,type,uid);
                         }
                     }
             }

@@ -1,30 +1,19 @@
 package com.example.myapplication;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.webkit.WebView;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
-
-import org.w3c.dom.Text;
-
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
-
-import jakarta.mail.MessagingException;
 
 
 public class MainActivity extends Activity {
@@ -45,7 +34,7 @@ public class MainActivity extends Activity {
 
         // add messages from database
         emailList.clear();
-        emailList.addAll(DatabaseHelper.getInstance(this).getRecords());
+//        emailList.addAll(DatabaseHelper.getInstance(this).getRecords());
 
         if (NetworkUtil.isNetworkAvailable(this)){
             new Thread(()->{
@@ -53,7 +42,6 @@ public class MainActivity extends Activity {
                 List<EmailMessage> emails = EmailHandler.getInstance()
                         .getEmails(email,pass,imap_host,limit,this,footerText);
                 Log.i("EMAIL HANDLER M",String.valueOf(emails.size()));
-
 
 
                 runOnUiThread(() -> {
